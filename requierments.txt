@@ -1,6 +1,1 @@
-fastapi
-uvicorn
-weaviate-client
-openai
-python-dotenv
-requests
+
