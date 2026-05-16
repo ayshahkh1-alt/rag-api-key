@@ -18,7 +18,9 @@ WEAVIATE_URL = os.getenv("WEAVIATE_URL")
 WEAVIATE_API_KEY = os.getenv("WEAVIATE_API_KEY")
 
 # ===================================
-# OPENAI
+# OPENAIprint("OPENAI:", OPENAI_API_KEY)
+print("WEAVIATE URL:", WEAVIATE_URL)
+print("WEAVIATE KEY:", WEAVIATE_API_KEY)
 # ===================================
 
 client_ai = OpenAI(api_key=OPENAI_API_KEY)
@@ -26,16 +28,20 @@ client_ai = OpenAI(api_key=OPENAI_API_KEY)
 # ===================================
 # WEAVIATE
 # ===================================
-
-client = weaviate.connect_to_weaviate_cloud(
-    cluster_url=WEAVIATE_URL,
-    auth_credentials=weaviate.auth.AuthApiKey(
-        WEAVIATE_API_KEY
+try:
+    client = weaviate.connect_to_weaviate_cloud(
+        cluster_url=WEAVIATE_URL,
+        auth_credentials=weaviate.auth.AuthApiKey(
+            WEAVIATE_API_KEY
+        )
     )
-)
 
-collection = client.collections.get("KnowledgeBase")
+    collection = client.collections.get("KnowledgeBase")
+    print("Weaviate connected successfully ✅")
 
+except Exception as e:
+    print("ERROR CONNECTING TO WEAVIATE:")
+    print(e)
 # ===================================
 # REQUEST MODEL
 # ===================================
