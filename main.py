@@ -14,8 +14,8 @@ app = FastAPI()
 # ===================================
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-WEAVIATE_URL = os.getenv("https://avorqfxtslmw00omr0rt1g.c0.asia-southeast1.gcp.weaviate.cloud")
-WEAVIATE_API_KEY = os.getenv("aDMzTFVKNmQ4MHBYQ2RHc19GOGtId3NJMHJ2MDZMRHhsNVcyY2J5c3l5Q2l5RW40cDk3ejdPWmpuN0dBPV92MjAw")
+WEAVIATE_URL = os.getenv("WEAVIATE_URL")
+WEAVIATE_API_KEY = os.getenv("WEAVIATE_API_KEY")
 
 # ===================================
 # OPENAI
