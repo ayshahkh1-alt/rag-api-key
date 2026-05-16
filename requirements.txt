@@ -4,3 +4,4 @@ weaviate-client
 openai
 python-dotenv
 requests
+packaging
