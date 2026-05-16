@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import weaviate
 from openai import OpenAI
@@ -9,6 +10,15 @@ import re
 load_dotenv()
 
 app = FastAPI()
+
+# ✅ CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 🔐 Environment Variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
