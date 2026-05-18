@@ -1,4 +1,4 @@
-اfrom fastapi import FastAPI
+from fastapi import FastAPI
 from pydantic import BaseModel
 import weaviate
 from openai import OpenAI
@@ -17,7 +17,7 @@ client_ai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 client = weaviate.connect_to_weaviate_cloud(
     cluster_url="https://avorqfxtslmw00omr0rt1g.c0.asia-southeast1.gcp.weaviate.cloud",
     auth_credentials=weaviate.auth.AuthApiKey(
-        "aDMzTFVKNmQ4MHBYQ2RHc19GOGtId3NJMHJ2MDZMRHhsNVcyY2J5c3l5Q2l5RW40cDk3ejdPWmpuN0dBPV92MjAw"
+        "YOUR_API_KEY"
     )
 )
 
@@ -26,6 +26,24 @@ collection = client.collections.get("KnowledgeBase")
 
 class ChatRequest(BaseModel):
     question: str
+
+
+# 🌸 كلمات خاصة بمجال الورد
+flower_keywords = [
+    "ورد",
+    "بوكيه",
+    "زهور",
+    "هدية",
+    "هدايا",
+    "جوري",
+    "تغليف",
+    "مناسبة",
+    "عيد",
+    "تنسيق",
+    "توليب",
+    "لافندر",
+    "باقة"
+]
 
 
 # 🧼 تنظيف النص
@@ -44,9 +62,10 @@ def filter_results(objects, question):
 
     filtered = []
 
-    # استخراج رقم السعر من السؤال
+    # استخراج السعر من السؤال
     price_filter = None
     price_match = re.search(r"(\d+)\s*شيكل", question)
+
     if price_match:
         price_filter = float(price_match.group(1))
 
@@ -57,7 +76,7 @@ def filter_results(objects, question):
 
         price = extract_price(text)
 
-        # 🔥 فلترة السعر إذا موجود بالسؤال
+        # فلترة السعر
         if price_filter is not None and price != price_filter:
             continue
 
@@ -66,14 +85,16 @@ def filter_results(objects, question):
     return filtered
 
 
-# 🔥 تنسيق الرد النهائي
+# ✨ تنسيق الرد
 def format_answer(text: str) -> str:
 
     lines = text.split("\n")
     result = []
 
     for line in lines:
+
         line = line.strip()
+
         if not line:
             continue
 
@@ -84,43 +105,77 @@ def format_answer(text: str) -> str:
     return "\n".join(result)
 
 
+# 🌸 SYSTEM PROMPT
+SYSTEM_PROMPT = """
+أنت مساعد ذكي خاص بمتجر ورود وهدايا فقط.
+
+مهمتك:
+- مساعدة العملاء في اختيار البوكيهات والهدايا
+- اقتراح منتجات مناسبة
+- الإجابة عن الأسعار والألوان والمناسبات
+
+إذا كان السؤال خارج نطاق الورد أو المتجر:
+لا تجب على السؤال.
+بدلاً من ذلك قل بلطف:
+"أنا مساعد مختص بالورود والهدايا 🌸
+يمكنني مساعدتك في البوكيهات، الهدايا، الأسعار، والتنسيقات 😊"
+
+طريقة الرد:
+- كن ودودًا ولطيفًا
+- اجعل الرد يبدو كمحادثة طبيعية
+- حاول فتح حوار مع العميل
+- اسأل سؤالًا يساعده يكمل الحديث
+"""
+
+
 @app.post("/chat")
 def chat(req: ChatRequest):
 
+    question = req.question.strip()
+
+    # 🔥 منع الأسئلة خارج النطاق
+    if not any(word in question for word in flower_keywords):
+
+        return {
+            "question": question,
+            "answer": "أنا مساعد مختص بالورود والهدايا 🌸\nيمكنني مساعدتك في البوكيهات والهدايا والتنسيقات 😊"
+        }
+
     # 1. Retrieve من Weaviate
     results = collection.query.near_text(
-        query=req.question,
+        query=question,
         limit=20
     )
 
-    # 2. فلترة ذكية
-    filtered_texts = filter_results(results.objects, req.question)
+    # 2. فلترة النتائج
+    filtered_texts = filter_results(results.objects, question)
+
+    # ❌ إذا لا يوجد نتائج
+    if not filtered_texts:
+
+        return {
+            "question": question,
+            "answer": "لا توجد منتجات مطابقة حالياً 🌸\nهل ترغب بمناسبة معينة أو لون محدد لنقترح عليك خيارات أخرى؟ 😊"
+        }
 
     context = "\n\n".join(filtered_texts)
 
-    # 3. Prompt محسن
+    # 3. Prompt
     prompt = f"""
-أنت مساعد متجر ورد احترافي جداً.
-
-🎯 قواعد مهمة:
-- استخدم فقط المعلومات الموجودة
-- لا تخترع منتجات
-- رد بشكل "كرت منتج"
-- إذا لا يوجد نتائج قل: لا توجد منتجات مطابقة
-
-تنسيق الرد:
-
-🌹 اسم المنتج
-💰 السعر: ...
-📦 التوفر: ...
+استخدم فقط المعلومات التالية للإجابة.
 
 المعلومات:
 {context}
 
 السؤال:
-{req.question}
+{question}
 
-أجب بالعربية فقط وبشكل منظم.
+مهم جداً:
+- لا تخترع أي منتج
+- استخدم فقط المعلومات الموجودة
+- رد بطريقة لطيفة وودودة
+- حاول فتح حوار مع العميل
+- اقترح خيارات مشابهة إذا أمكن
 """
 
     # 4. GPT
@@ -129,9 +184,12 @@ def chat(req: ChatRequest):
         messages=[
             {
                 "role": "system",
-                "content": "أنت مساعد متجر ورد ذكي يعرض المنتجات بدقة وبدون تخمين."
+                "content": SYSTEM_PROMPT
             },
-            {"role": "user", "content": prompt}
+            {
+                "role": "user",
+                "content": prompt
+            }
         ]
     )
 
@@ -141,7 +199,7 @@ def chat(req: ChatRequest):
     answer = format_answer(raw_answer)
 
     return {
-        "question": req.question,
+        "question": question,
         "answer": answer,
         "sources_used": len(results.objects),
         "filtered_results": len(filtered_texts)
