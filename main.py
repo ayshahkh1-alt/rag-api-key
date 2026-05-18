@@ -1,5 +1,4 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+اfrom fastapi import FastAPI
 from pydantic import BaseModel
 import weaviate
 from openai import OpenAI
@@ -11,30 +10,14 @@ load_dotenv()
 
 app = FastAPI()
 
-# ✅ CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# 🔐 Environment Variables
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-WEAVIATE_URL = os.getenv("WEAVIATE_URL")
-WEAVIATE_API_KEY = os.getenv("WEAVIATE_API_KEY")
-
 # OpenAI client
-client_ai = OpenAI(
-    api_key=OPENAI_API_KEY
-)
+client_ai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Weaviate
 client = weaviate.connect_to_weaviate_cloud(
-    cluster_url=WEAVIATE_URL,
+    cluster_url="https://avorqfxtslmw00omr0rt1g.c0.asia-southeast1.gcp.weaviate.cloud",
     auth_credentials=weaviate.auth.AuthApiKey(
-        WEAVIATE_API_KEY
+        "aDMzTFVKNmQ4MHBYQ2RHc19GOGtId3NJMHJ2MDZMRHhsNVcyY2J5c3l5Q2l5RW40cDk3ejdPWmpuN0dBPV92MjAw"
     )
 )
 
@@ -64,7 +47,6 @@ def filter_results(objects, question):
     # استخراج رقم السعر من السؤال
     price_filter = None
     price_match = re.search(r"(\d+)\s*شيكل", question)
-
     if price_match:
         price_filter = float(price_match.group(1))
 
@@ -75,7 +57,7 @@ def filter_results(objects, question):
 
         price = extract_price(text)
 
-        # 🔥 فلترة السعر
+        # 🔥 فلترة السعر إذا موجود بالسؤال
         if price_filter is not None and price != price_filter:
             continue
 
@@ -91,9 +73,7 @@ def format_answer(text: str) -> str:
     result = []
 
     for line in lines:
-
         line = line.strip()
-
         if not line:
             continue
 
@@ -107,21 +87,18 @@ def format_answer(text: str) -> str:
 @app.post("/chat")
 def chat(req: ChatRequest):
 
-    # 1. Retrieve from Weaviate
+    # 1. Retrieve من Weaviate
     results = collection.query.near_text(
         query=req.question,
         limit=20
     )
 
     # 2. فلترة ذكية
-    filtered_texts = filter_results(
-        results.objects,
-        req.question
-    )
+    filtered_texts = filter_results(results.objects, req.question)
 
     context = "\n\n".join(filtered_texts)
 
-    # 3. Prompt
+    # 3. Prompt محسن
     prompt = f"""
 أنت مساعد متجر ورد احترافي جداً.
 
@@ -129,8 +106,7 @@ def chat(req: ChatRequest):
 - استخدم فقط المعلومات الموجودة
 - لا تخترع منتجات
 - رد بشكل "كرت منتج"
-- إذا لا يوجد نتائج قل:
-لا توجد منتجات مطابقة
+- إذا لا يوجد نتائج قل: لا توجد منتجات مطابقة
 
 تنسيق الرد:
 
@@ -155,10 +131,7 @@ def chat(req: ChatRequest):
                 "role": "system",
                 "content": "أنت مساعد متجر ورد ذكي يعرض المنتجات بدقة وبدون تخمين."
             },
-            {
-                "role": "user",
-                "content": prompt
-            }
+            {"role": "user", "content": prompt}
         ]
     )
 
